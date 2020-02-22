@@ -1,0 +1,8 @@
+{
+    "db" : {
+        "host" : "localhost",
+        "dbName" : "zipdev",
+        "user" : "root",
+        "pwd" : ""
+    }
+}

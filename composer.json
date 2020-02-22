@@ -1,0 +1,21 @@
+{
+    "name": "edgardrp/phonebook",
+    "description": "Simple API for a Phonebook",
+    "type": "project",
+    "license": "ISC",
+    "authors": [
+        {
+            "name": "Edgar Ruiz",
+            "email": "eruizp@coppel.com"
+        }
+    ],
+    "require": {
+        "altorouter/altorouter" : "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Controllers\\" : "controllers/",
+            "Models\\" : "models/"
+        }
+    }
+}
