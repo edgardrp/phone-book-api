@@ -20,6 +20,10 @@ $router->map('GET', '/api/v1/contacts', function () use ($controller) {
     echo $controller->getContacts($name, $surname);
 });
 
+$router->map('GET', '/api/v1/contacts/[i:id]', function ($id) use ($controller) {
+    echo $controller->getContactByID($id);
+});
+
 $router->map('POST', '/api/v1/contacts', function () use ($controller) {
     $newContact = json_decode(file_get_contents('php://input'));
     echo $controller->saveContact($newContact);

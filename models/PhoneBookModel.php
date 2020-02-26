@@ -27,12 +27,28 @@ class PhoneBookModel
         return $connection;
     }
 
+    private function getPhones($id, $con)
+    {
+        $query = "SELECT id, phone_number FROM phones WHERE contact_id = :contactID";
+        $statement = $con->prepare($query);
+        $statement->bindParam(":contactID", $id, \PDO::PARAM_INT);
+        $statement->execute();
+        return $statement->fetchAll();
+    }
+
+    private function getMailAddress($id, $con)
+    {
+        $query = "SELECT id, email_address FROM emails WHERE contact_id = :contactID";
+        $statement = $con->prepare($query);
+        $statement->bindParam(":contactID", $id, \PDO::PARAM_INT);
+        $statement->execute();
+        return $statement->fetchAll();
+    }
+
     public function getContacts($name, $surname)
     {
-        $query = "SELECT c.name, c.surname, p.phone_number, e.email_address 
-            FROM contacts c 
-            LEFT JOIN phones p ON p.contact_id = c.id 
-            LEFT JOIN emails e ON e.contact_id = c.id";
+        $query = "SELECT c.id, c.name, c.surname
+            FROM contacts c ";
         if (isset($name) || isset($surname)) {
             $query .= " WHERE ";
             $conditions = null;
@@ -52,10 +68,33 @@ class PhoneBookModel
         $statement = $con->prepare($query);
         $statement->execute();
         $response = $statement->fetchAll();
+        foreach ($response as $contact) {
+            $contact->phones = $this->getPhones($contact->id, $con);
+            $contact->emailAddress = $this->getMailAddress($contact->id, $con);
+        }
         return json_encode($response);
     }
 
-    public function savePhones($id, $phones, $con)
+    public function getContactByID($id)
+    {
+        $con = $this->getConnection();
+        $query = "SELECT c.id, c.name, c.surname FROM contacts c WHERE c.id = :contactID;";
+        $statement = $con->prepare($query);
+        $statement->bindParam(":contactID", $id, \PDO::PARAM_INT);
+        $statement->execute();
+        $contact = $statement->fetch();
+        if ($contact) {
+            $contact->phones = $this->getPhones($id, $con);
+            $contact->emailAddress = $this->getMailAddress($id, $con);
+            return json_encode($contact);
+        }
+        else {
+            header( $_SERVER["SERVER_PROTOCOL"] . ' 404 Not Found');
+            die();
+        }
+    }
+
+    private function savePhones($id, $phones, $con)
     {
         $query = "INSERT INTO phones (contact_id, phone_number) VALUES (:contactID, :phoneNumber);";
         foreach ($phones as $p) {
@@ -66,7 +105,7 @@ class PhoneBookModel
         }
     }
 
-    public function saveMails($id, $mails, $con)
+    private function saveMails($id, $mails, $con)
     {
         $query = "INSERT INTO emails (contact_id, email_address) VALUES (:contactID, :mail);";
         foreach ($mails as $m) {
@@ -95,7 +134,50 @@ class PhoneBookModel
 
     public function updateContact($id, $updatedContact)
     {
-        return $this->model->updateContact($id, $updatedContact);
+        $current = json_decode($this->getContactById($id));
+        $con = $this->getConnection();
+        if ($current->name != $updatedContact->name) {
+            $current->name = $updatedContact->name;
+        }
+        if ($current->surname != $updatedContact->surname) {
+            $current->surname = $updatedContact->surname;
+        }
+        $query = "UPDATE contacts SET name = :name, surname = :surname WHERE id = :id;";
+        $statement = $con->prepare($query);
+        $statement->bindParam(":name", $current->name, \PDO::PARAM_STR);
+        $statement->bindParam(":surname", $current->surname, \PDO::PARAM_STR);
+        $statement->bindParam(":id", $id, \PDO::PARAM_INT);
+        $statement->execute();
+        return json_encode($current);
+    }
+
+    private function deletePhones($id, $con)
+    {
+        $query = "DELETE FROM phones WHERE contact_id = :contactID;";
+        $statement = $con->prepare($query);
+        $statement->bindParam(":contactID", $id, \PDO::PARAM_INT);
+        $statement->execute();
+    }
+
+    private function deleteEmailAddress($id, $con)
+    {
+        $query = "DELETE FROM emails WHERE contact_id = :contactID;";
+        $statement = $con->prepare($query);
+        $statement->bindParam(":contactID", $id, \PDO::PARAM_INT);
+        $statement->execute();
+    }
+
+    public function deleteContact($id)
+    {
+        $delete = $this->getContactById($id);
+        $con = $this->getConnection();
+        $this->deletePhones($id, $con);
+        $this->deleteEmailAddress($id, $con);
+        $query = "DELETE FROM contacts WHERE id = :contactID;";
+        $statement = $con->prepare($query);
+        $statement->bindParam(":contactID", $id, \PDO::PARAM_INT);
+        $statement->execute();
+        return $delete;
     }
 
 }
